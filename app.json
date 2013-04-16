@@ -1,0 +1,9 @@
+{
+    "name": "sfdc_assistant",
+    "jsFiles": ["startup.js"],
+    "type": "foreground",
+    "displayName": "Salesforce Call Assistant",
+    "iconFile"  : "sfdc_assistant.png",
+    "hidden" : false,
+    "hasIdle": true
+}
