@@ -5,5 +5,5 @@
     "displayName": "Salesforce Call Assistant",
     "iconFile"  : "sfdc_assistant.png",
     "hidden" : false,
-    "hasIdle": true
+    "hasIdle": false
 }
