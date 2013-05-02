@@ -15,7 +15,6 @@ sfdcAssistant.setupEventListeners = function() {
     'eventName': 'digium.phone.incoming_call',
     'callback': this.handleIncomingCall.bind(this)
   });
-  
 };
 
 // Handle incoming phone calls.
@@ -39,6 +38,26 @@ sfdcAssistant.handleIncomingCall = function(callData) {
   // util.debug('lastStatusText: '    + callData.eventData.lastStatusText);
   // util.debug('mediaStatus: '    + callData.eventData.mediaStatus);
   // util.debug('headers: '    + callData.eventData.headers);
+  
+  this.currentCall = callData.eventData;
+  
+  // Listen for changes in the current call's state
+  // this function will show the 'on call' screen when the user picks up
+  // and hide the incoming/on call screen when the current call ends
+  // Credit: https://github.com/sruffell/digium-phone-apps/blob/master/callerId/startup.js
+  digium.phone.observeCallEvents({
+      'callHandle'  : callData.eventData.callHandle,
+      'handler'    : function(obj) {
+        util.debug('Call state is now: ' + obj.state);
+        if ("EARLY" == obj.state) {
+          this.setIncomingCallSoftkeys();
+        } else if ("CONFIRMED" == obj.state) {
+          this.setOnCallSoftkeys();
+        } else if ("DISCONNCTD" == obj.state) {
+          digium.background();
+        }
+      }.bind(this)
+    });
   
   // Fetch the calling phone number:
   var callerNumber = tools.getCallerId(callData.eventData).number;
@@ -120,6 +139,35 @@ sfdcAssistant.displayData = function(obj){
   } else {
     util.debug('No SFDC match :-(');
   }
+}.bind(this);
+
+// Set the window's softkeys during an incoming call
+// Credit: https://github.com/sruffell/digium-phone-apps/blob/master/callerId/startup.js
+sfdcAssistant.setIncomingCallSoftkeys = function () {
+  //clear any softkeys that are already set
+  window.clearSoftkeys();
+
+  //set the first softkey to allow the user to answer the call
+  window.setSoftkey(1, 'Answer', function() {
+    digium.phone.answer(this.currentCall);
+  }.bind(this));
+
+  //set the fourth softkey to allow the user to ignore the call
+  window.setSoftkey(4, 'Reject', function() {
+    digium.phone.reject(this.currentCall);
+  }.bind(this));
+};
+
+// Set the window's softkeys for an answered call
+// Credit: https://github.com/sruffell/digium-phone-apps/blob/master/callerId/startup.js
+sfdcAssistant.setOnCallSoftkeys = function () {
+  //clear any softkeys that are already set
+  window.clearSoftkeys();
+  
+  //set the first softkey to allow the user to end the call
+  window.setSoftkey(1, 'End', function() {
+    digium.phone.hangup(this.currentCall);
+  }.bind(this));
 };
 
 // Gets a Salesforce.com REST API token.
@@ -180,6 +228,7 @@ sfdcAssistant.sfdcGETRequest = function(uri, callbackName) {
 // Setup steps:
 sfdcAssistant.start = function() {
   util.debug('App started on a phone model ' + digium.phoneModel);
+  this.currentCall = null;
   // Get the config settings and cache it locally:
   var config = app.getConfig().settings;
   this.config = util.defaults(config, {
