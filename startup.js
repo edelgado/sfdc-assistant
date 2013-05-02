@@ -58,48 +58,84 @@ sfdcAssistant.handleIncomingCall = function(callData) {
 
 // Display the data on the phone screen.
 sfdcAssistant.displayData = function(obj){
-  var windowTitle = screen.setTitleText({'title' : 'Salesforce Call Assistant'});
+  var windowTitle = screen.setTitleText({'title' : 'Caller Salesforce Information'});
   if (typeof obj != 'undefined' && obj.totalSize == 1) {
     util.debug('Found SFDC match :-)');
-    var fields = [
-      {
-        label: 'First Name',
-        value: obj.records[0].FirstName
-      },
-      {
-        label: 'Last Name',
-        value: obj.records[0].LastName
-      },
+    var fieldsToDisplay = [
       {
         label: 'Title',
+        // icon: 'glyphicons_353_nameplate_alt.png',
+        // icon_width: 24,
+        // icon_height: 22,
+        icon: 'title_icon.gif',
+        icon_width: 52,
+        icon_height: 17,
         value: obj.records[0].Title
       },
       {
         label: 'Company',
+        icon: 'glyphicons_089_building.png',
+        icon_width: 24,
+        icon_height: 26,
         value: obj.records[0].Account.Name
       },
       {
         label: 'Type',
+        icon: 'glyphicons_332_certificate.png',
+        icon_width: 17,
+        icon_height: 25,
         value: obj.records[0].Account.Type
+      },
+      {
+        label: 'Rating',
+        icon: 'glyphicons_331_dashboard.png',
+        icon_width: 24,
+        icon_height: 24,
+        value: obj.records[0].Account.Rating
       }
     ];
     var contents = new Scroll(0,Text.LINE_HEIGHT, window.w, window.h - Text.LINE_HEIGHT);
     var fieldLabel = {};
     var fieldValue = {};
+    var icon = {};
     var rowCount = 1;
+    var linePadding = 2;
+    var nextLineY = 0;
+    var fieldHeight = 20;
+    
+    // The name of the contact, position at x=0, y=LINE_HEIGHT, w=320, h=0 (calculated later)
+    contactNameUIElement = new Text(0,Text.LINE_HEIGHT,320,0);
+    contactNameUIElement.label = obj.records[0].FirstName + ' ' + obj.records[0].LastName;
+    contactNameUIElement.align(Widget.LEFT);
+    util.debug('Current W x H: ' + contactNameUIElement.w + 'x' + contactNameUIElement.h);
+    util.debug('Current Label Size: ' + contactNameUIElement.labelSize);
+    contactNameUIElement.labelSize = parseInt((contactNameUIElement.labelSize * 2), 10);
+    contactNameUIElement.h = contactNameUIElement.labelSize;
+    util.debug('New Label Size: ' + contactNameUIElement.labelSize);
+    util.debug('New W x H: ' + contactNameUIElement.w + 'x' + contactNameUIElement.h);
+    contents.add(contactNameUIElement);
+    nextLineY = Text.LINE_HEIGHT + contactNameUIElement.h + linePadding;
 
-    fields.forEach(function(field){
-
-      fieldLabel = new Text(0,Text.LINE_HEIGHT * rowCount,55,Text.LINE_HEIGHT);
-      fieldLabel.align(Widget.RIGHT);
-      fieldLabel.label = field.label + ':';
-
-      fieldValue = new Text(60,Text.LINE_HEIGHT * rowCount,10,Text.LINE_HEIGHT);
-      fieldValue.label = field.value;
-      fieldValue.fitLabel();
-
-      contents.add(fieldLabel, fieldValue);
-      rowCount++;
+    fieldsToDisplay.forEach(function(field){
+      // Icon image widget:
+      icon = new Image("app", field.icon, 0, nextLineY, field.icon_width, field.icon_height);
+      util.debug('Adding icon filename=' + field.icon + ', y-pos=' + nextLineY);
+      // Limit to a certain height:
+      if (field.icon_height > fieldHeight - 6) {
+        icon.resize(0,fieldHeight - 6);
+      }
+      
+      // TODO: Right-align icons based on their current width and an imaginary right margin of about 20.
+      
+      // Text value widget:
+      fieldValue = new Text(25,nextLineY,250,Text.LINE_HEIGHT, field.value);
+      fieldValue.labelSize = parseInt((fieldValue.labelSize * 1.1), 10);
+      fieldValue.color = 'black';
+      fieldValue.boxType = Widget.FLAT_BOX;
+      fieldValue.labelColor = 'white';
+      contents.add(icon);
+      contents.add(fieldValue);
+      nextLineY += fieldHeight;
     });
 
     digium.foreground();
@@ -109,6 +145,7 @@ sfdcAssistant.displayData = function(obj){
     util.debug('No SFDC match :-(');
   }
 };
+
 // Gets a Salesforce.com REST API token.
 sfdcAssistant.getSFDCToken = function(){
   var request = new NetRequest();
@@ -122,7 +159,14 @@ sfdcAssistant.getSFDCToken = function(){
     // util.debug(JSON.stringify(response));
     // util.debug(response.access_token);
     // Set the token and instance URL in the larger app scope:
-    sfdcAssistant.setSFDCToken(response);
+    if (typeof response.error != 'undefined') {
+      util.debug('== Error obtaining a Salesforce.com API token. The app will stop here. Details: ' + JSON.stringify(response));
+    } else {
+      // Set the token where we can read it later:
+      sfdcAssistant.setSFDCToken(response);
+      // Setup event listeners:
+      sfdcAssistant.setupEventListeners();
+    }
   };
   var body = {
     'grant_type':    'password',
@@ -169,10 +213,8 @@ sfdcAssistant.start = function() {
     'sfdc_password':        '',
     'sfdc_instance':        'test' // test, na1, cs3, etc.
   });
-  // Salesforce.com REST API token:
+  // Salesforce.com REST API token. If successful, it will also setup the event listeners.
   this.getSFDCToken();
-  // Setup event listeners:
-  this.setupEventListeners();
 };
 
 // Start the Rube Goldberg machine:

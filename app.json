@@ -3,7 +3,7 @@
     "jsFiles": ["startup.js"],
     "type": "foreground",
     "displayName": "Salesforce Call Assistant",
-    "iconFile"  : "sfdc_assistant.png",
+    "iconFile"  : "glyphicons_396_read_it_later.png",
     "hidden" : false,
     "hasIdle": false
 }

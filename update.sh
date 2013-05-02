@@ -3,7 +3,7 @@
 # Pull the application name from the app.json file.
 #APPNAME=`cat app.json | grep "name" | cut -f 2 -d\: | sed -e "s/\s\+\"\(\w\+\)\",/\1/"`
 APPNAME=sfdc_assistant
-IP_ADDR=192.168.1.104
+IP_ADDR=192.168.1.165
 
 #
 if [ -z ${IP_ADDR} ]; then
@@ -18,7 +18,7 @@ fi
 case "$1" in
   install)
      jsl -conf jsl.conf -process startup.js
-     zip /tmp/${APPNAME}.zip app.json startup.js tools.js
+     zip /tmp/${APPNAME}.zip *
      curl --anyauth --form file=@/tmp/${APPNAME}.zip --form mode=install http://${IP_ADDR}/cgi-bin/uapp.cgi --user admin:${PHONE_PW}
      ;;
   uninstall)
