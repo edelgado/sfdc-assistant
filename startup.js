@@ -63,45 +63,27 @@ sfdcAssistant.displayData = function(obj){
     util.debug('Found SFDC match :-)');
     var fieldsToDisplay = [
       {
-        label: 'Title',
-        // icon: 'glyphicons_353_nameplate_alt.png',
-        // icon_width: 24,
-        // icon_height: 22,
-        icon: 'title_icon.gif',
-        icon_width: 52,
-        icon_height: 17,
+        label: 'TITLE',
         value: obj.records[0].Title
       },
       {
-        label: 'Company',
-        icon: 'glyphicons_089_building.png',
-        icon_width: 24,
-        icon_height: 26,
+        label: 'COMPANY',
         value: obj.records[0].Account.Name
       },
       {
-        label: 'Type',
-        icon: 'glyphicons_332_certificate.png',
-        icon_width: 17,
-        icon_height: 25,
+        label: 'TYPE',
         value: obj.records[0].Account.Type
       },
       {
-        label: 'Rating',
-        icon: 'glyphicons_331_dashboard.png',
-        icon_width: 24,
-        icon_height: 24,
+        label: 'RATING',
         value: obj.records[0].Account.Rating
       }
     ];
     var contents = new Scroll(0,Text.LINE_HEIGHT, window.w, window.h - Text.LINE_HEIGHT);
     var fieldLabel = {};
     var fieldValue = {};
-    var icon = {};
-    var rowCount = 1;
     var linePadding = 2;
     var nextLineY = 0;
-    var fieldHeight = 20;
     
     // The name of the contact, position at x=0, y=LINE_HEIGHT, w=320, h=0 (calculated later)
     contactNameUIElement = new Text(0,Text.LINE_HEIGHT,320,0);
@@ -109,7 +91,7 @@ sfdcAssistant.displayData = function(obj){
     contactNameUIElement.align(Widget.LEFT);
     util.debug('Current W x H: ' + contactNameUIElement.w + 'x' + contactNameUIElement.h);
     util.debug('Current Label Size: ' + contactNameUIElement.labelSize);
-    contactNameUIElement.labelSize = parseInt((contactNameUIElement.labelSize * 2), 10);
+    contactNameUIElement.labelSize = parseInt((contactNameUIElement.labelSize * 1.5), 10);
     contactNameUIElement.h = contactNameUIElement.labelSize;
     util.debug('New Label Size: ' + contactNameUIElement.labelSize);
     util.debug('New W x H: ' + contactNameUIElement.w + 'x' + contactNameUIElement.h);
@@ -117,25 +99,19 @@ sfdcAssistant.displayData = function(obj){
     nextLineY = Text.LINE_HEIGHT + contactNameUIElement.h + linePadding;
 
     fieldsToDisplay.forEach(function(field){
-      // Icon image widget:
-      icon = new Image("app", field.icon, 0, nextLineY, field.icon_width, field.icon_height);
-      util.debug('Adding icon filename=' + field.icon + ', y-pos=' + nextLineY);
-      // Limit to a certain height:
-      if (field.icon_height > fieldHeight - 6) {
-        icon.resize(0,fieldHeight - 6);
-      }
-      
-      // TODO: Right-align icons based on their current width and an imaginary right margin of about 20.
-      
-      // Text value widget:
-      fieldValue = new Text(25,nextLineY,250,Text.LINE_HEIGHT, field.value);
-      fieldValue.labelSize = parseInt((fieldValue.labelSize * 1.1), 10);
-      fieldValue.color = 'black';
-      fieldValue.boxType = Widget.FLAT_BOX;
-      fieldValue.labelColor = 'white';
-      contents.add(icon);
+      // Label black boxes:
+      fieldLabel = new Text(0,nextLineY,50,Text.LINE_HEIGHT, field.label);
+      fieldLabel.boxType = Widget.FLAT_BOX; // Filled box
+      fieldLabel.color = 'black';           // Black background
+      fieldLabel.labelColor = 'white';      // Text is white
+      fieldLabel.align(Widget.RIGHT);       // The text should be right-aligned
+
+      // Caller information:
+      fieldValue = new Text(55,nextLineY,265,Text.LINE_HEIGHT, field.value);
+
+      contents.add(fieldLabel);
       contents.add(fieldValue);
-      nextLineY += fieldHeight;
+      nextLineY += Text.LINE_HEIGHT + linePadding;
     });
 
     digium.foreground();
