@@ -54,6 +54,20 @@ sfdcAssistant.handleIncomingCall = function(callData) {
         } else if ("CONFIRMED" == obj.state) {
           this.setOnCallSoftkeys();
         } else if ("DISCONNCTD" == obj.state) {
+          // TODO: Prompt to ask if a call task should be created associated with the contact. It would
+          //       be awesome if we can do a picklist of the status. Sample task JSON below:
+          /*
+          {
+            "CallDisposition":"Inbound call successful.",
+            "CallDurationInSeconds":84,
+            "CallType":"Inbound",
+            "Priority":"Normal",  // Lookup
+            "Status":"Completed", // Lookup
+            "Subject":"Call",
+            "Type":"Call",
+            "WhoId":"003Q000000hGHarIAG"  // Lookup
+          }
+          */
           digium.background();
         }
       }.bind(this)
@@ -209,6 +223,25 @@ sfdcAssistant.setSFDCToken = function(obj) {
   this.sfdcInstanceURL = obj.instance_url;
   // Test it out by printing the token to the console.
   util.debug('Got SFDC Token! Token is: ' + this.sfdcToken);
+  // Test calls:
+  // Get the list of Task Statuses
+  var query = 'SELECT IsClosed, IsDefault, MasterLabel, SortOrder FROM TaskStatus';
+  // sfdcAssistant.sfdcGETRequest('/services/data/v20.0/query/?q=' + encodeURIComponent(query));
+  // Get the list of Task Priorities
+  query = 'SELECT IsDefault, IsHighPriority, MasterLabel, SortOrder FROM TaskPriority';
+  // sfdcAssistant.sfdcGETRequest('/services/data/v20.0/query/?q=' + encodeURIComponent(query));
+  // Create a sample call log record:
+  var task = {
+    "CallDisposition":"Inbound call successful.",
+    "CallDurationInSeconds":84,
+    "CallType":"Inbound",
+    "Priority":"Normal",  // Lookup
+    "Status":"Completed", // Lookup
+    "Subject":"Call",
+    "Type":"Call",
+    "WhoId":"003Q000000hGHarIAG"  // Lookup
+  };
+  sfdcAssistant.sfdcPOSTRequest('/services/data/v20.0/sobjects/Task/', task);
 };
 
 // Generic Salesforce.com GET request handler.
@@ -216,13 +249,39 @@ sfdcAssistant.sfdcGETRequest = function(uri, callbackName) {
   var callback = callbackName || function(){};
   var request = new NetRequest();
   var URL = this.sfdcInstanceURL + uri;
+  util.debug('sfdcGETRequest URL is: ' + URL);
   request.open('GET', URL);
   request.setRequestHeader('Authorization', 'Bearer ' + this.sfdcToken);
   request.oncomplete = function() {
-    // util.debug('sfdcGETRequest: ' + this.responseText);
+    util.debug('sfdcGETRequest: ' + this.responseText);
     callback(JSON.parse(this.responseText));
   };
   request.send();
+};
+
+// Generic Salesforce.com POST request handler.
+sfdcAssistant.sfdcPOSTRequest = function(uri, payload, callbackName) {
+  var callback = callbackName || function(){};
+  var request = new NetRequest();
+  var URL = this.sfdcInstanceURL + uri;
+  util.debug('sfdcPOSTRequest URL is: ' + URL);
+  request.open('POST', URL);
+  request.setRequestHeader('Content-Type', 'application/json');
+  request.setRequestHeader('Authorization', 'Bearer ' + this.sfdcToken);
+  request.oncomplete = function() {
+    var response = JSON.parse(this.responseText);
+    if (typeof response.error != 'undefined') {
+      util.debug('== Error trying to sfdcPOSTRequest. Details: ' + JSON.stringify(response));
+    } else {
+      util.debug('sfdcPOSTRequest response: ' + this.responseText);
+      callback(JSON.parse(this.responseText));
+    }
+  };
+  request.onreadystatechange = function () {
+    util.debug(request.readyState);
+    util.debug(request.status);
+  }
+  request.send(JSON.stringify(payload));
 };
 
 // Setup steps:
