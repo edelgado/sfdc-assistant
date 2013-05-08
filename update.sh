@@ -17,7 +17,7 @@ fi
 
 case "$1" in
   install)
-     jsl -conf jsl.conf -process startup.js
+     jsl -conf jsl.conf -process startup.js - process tools.js
      zip /tmp/${APPNAME}.zip *
      curl --anyauth --form file=@/tmp/${APPNAME}.zip --form mode=install http://${IP_ADDR}/cgi-bin/uapp.cgi --user admin:${PHONE_PW}
      ;;

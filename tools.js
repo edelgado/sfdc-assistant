@@ -10,8 +10,9 @@ tools.getCallerId = function(params) {
   var obj = {};
   var parts = remoteInfo.split('"');
   obj.name = parts[1];
-  //extract the number from the sip url that is listed in remoteInfo
-  obj.number = parts[2].split(':')[1].split('@')[0];
+  // Extract the number from the sip url that is listed in remoteInfo 
+  // and remove any special charachters, only leave numbers:
+  obj.number = parts[2].split(':')[1].split('@')[0].replace(/[^0-9]/ig,'');
   return obj;
 };
 
@@ -26,7 +27,7 @@ tools.serialize = function(obj, prefix) {
             encodeURIComponent(k) + "=" + encodeURIComponent(v));
     }
     return str.join("&");
-}
+};
 
 // Set exports as required in the "require()" core method:
 // See http://phones.digium.com/phone-api/reference/javascript-modules/exports

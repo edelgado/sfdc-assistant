@@ -75,41 +75,33 @@ sfdcAssistant.handleIncomingCall = function(callData) {
   
   // Fetch the calling phone number:
   var callerNumber = tools.getCallerId(callData.eventData).number;
-  // Do a SFDC API call:
-  var query = 'SELECT Id, FirstName, LastName, Salutation, Title, Account.name, Account.Rating, Account.Type ' + 
-    'FROM Contact WHERE ' + 
-    'Phone LIKE \'' + callerNumber + '\' ' + 
-    'OR AssistantPhone LIKE \'' + callerNumber + '\' ' + 
-    'OR HomePhone LIKE \'' + callerNumber + '\' ' +
-    'OR MobilePhone LIKE \'' + callerNumber + '\' ' +
-    'OR OtherPhone LIKE \'' + callerNumber + '\' ' +
-    'LIMIT 1';
-
-  // Query Salesforce.com:
-  sfdcAssistant.sfdcGETRequest('/services/data/v20.0/query/?q=' + encodeURIComponent(query), sfdcAssistant.displayData);
+  // Craft a SOSL find operation to find matching contacts:
+  var query = 'FIND {' + callerNumber + '} IN Phone FIELDS RETURNING Contact(Id, FirstName, LastName, Salutation, Title, Account.name, Account.Rating, Account.Type) LIMIT 1';
+  // Do the search in Salesforce:
+  sfdcAssistant.sfdcGETRequest('/services/data/v20.0/search/?q=' + encodeURIComponent(query), sfdcAssistant.displayData);
 };
 
 // Display the data on the phone screen.
 sfdcAssistant.displayData = function(obj){
   var windowTitle = screen.setTitleText({'title' : 'Caller Salesforce Information'});
-  if (typeof obj != 'undefined' && obj.totalSize == 1) {
+  if (typeof obj != 'undefined' && typeof obj[0].Id != 'undefined') {
     util.debug('Found SFDC match :-)');
     var fieldsToDisplay = [
       {
         label: 'TITLE',
-        value: obj.records[0].Title
+        value: obj[0].Title
       },
       {
         label: 'COMPANY',
-        value: obj.records[0].Account.Name
+        value: obj[0].Account.Name
       },
       {
         label: 'TYPE',
-        value: obj.records[0].Account.Type
+        value: obj[0].Account.Type
       },
       {
         label: 'RATING',
-        value: obj.records[0].Account.Rating
+        value: obj[0].Account.Rating
       }
     ];
     var contents = new Scroll(0,Text.LINE_HEIGHT, window.w, window.h - Text.LINE_HEIGHT);
@@ -120,7 +112,7 @@ sfdcAssistant.displayData = function(obj){
     
     // The name of the contact, position at x=0, y=LINE_HEIGHT, w=320, h=0 (calculated later)
     contactNameUIElement = new Text(0,Text.LINE_HEIGHT,320,0);
-    contactNameUIElement.label = obj.records[0].FirstName + ' ' + obj.records[0].LastName;
+    contactNameUIElement.label = obj[0].FirstName + ' ' + obj[0].LastName;
     contactNameUIElement.align(Widget.LEFT);
     util.debug('Current W x H: ' + contactNameUIElement.w + 'x' + contactNameUIElement.h);
     util.debug('Current Label Size: ' + contactNameUIElement.labelSize);
@@ -241,7 +233,7 @@ sfdcAssistant.setSFDCToken = function(obj) {
     "Type":"Call",
     "WhoId":"003Q000000hGHarIAG"  // Lookup
   };
-  sfdcAssistant.sfdcPOSTRequest('/services/data/v20.0/sobjects/Task/', task);
+  //sfdcAssistant.sfdcPOSTRequest('/services/data/v20.0/sobjects/Task/', task);
 };
 
 // Generic Salesforce.com GET request handler.
@@ -253,7 +245,7 @@ sfdcAssistant.sfdcGETRequest = function(uri, callbackName) {
   request.open('GET', URL);
   request.setRequestHeader('Authorization', 'Bearer ' + this.sfdcToken);
   request.oncomplete = function() {
-    util.debug('sfdcGETRequest: ' + this.responseText);
+    util.debug('sfdcGETRequest response was: ' + this.responseText);
     callback(JSON.parse(this.responseText));
   };
   request.send();
@@ -280,7 +272,7 @@ sfdcAssistant.sfdcPOSTRequest = function(uri, payload, callbackName) {
   request.onreadystatechange = function () {
     util.debug(request.readyState);
     util.debug(request.status);
-  }
+  };
   request.send(JSON.stringify(payload));
 };
 
